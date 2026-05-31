@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Clicker Empire - Rebirth Bar</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:#0e0e0e;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+#game{
+    width:520px;
+    background:#1b1b1b;
+    padding:20px;
+    border-radius:12px;
+    text-align:center;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+#clickBtn{
+    background:#2ecc71;
+    font-size:18px;
+}
+
+.upgrade{background:#333;color:white;}
+.upgrade:hover{background:#444;}
+
+.nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin:10px 0;
+}
+
+.page{display:none;}
+.active{display:block;}
+
+.topBar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+}
+
+#rebirthBtn{
+    width:120px;
+    background:#444;
+    color:white;
+    border-radius:8px;
+}
+
+.barWrap{
+    background:#333;
+    width:100%;
+    height:14px;
+    border-radius:8px;
+    overflow:hidden;
+    margin-bottom:10px;
+}
+
+#rebirthBar{
+    height:100%;
+    width:0%;
+    background:#2ecc71;
+}
+</style>
+
+</head>
+<body>
+
+<div id="game">
+
+<h2>Clicker Empire</h2>
+
+<!-- TOP BAR -->
+<div class="topBar">
+  <div>Coins: <span id="coins">0</span></div>
+  <button id="rebirthBtn" onclick="rebirth()">REBIRTH</button>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="barWrap">
+  <div id="rebirthBar"></div>
+</div>
+
+<div class="stat">Click Power: <span id="pc">1</span></div>
+<div class="stat">CPS: <span id="cps">0</span></div>
+<div class="stat">Rebirth Level: <span id="reb">0</span></div>
+
+<button id="clickBtn">CLICK</button>
+
+<div class="nav">
+<button onclick="change(-1)">⬅</button>
+<div>Page <span id="pageNum">1</span>/15</div>
+<button onclick="change(1)">➡</button>
+</div>
+
+<div id="pages"></div>
+
+</div>
+
+<script>
+
+/* ================= CORE ================= */
+let coins=0;
+let pc=1;
+let cps=0;
+let page=1;
+let rebirthLevel=0;
+
+/* ================= FORMAT ================= */
+function format(n){
+    if(n>=1e12) return (n/1e12).toFixed(2)+"T";
+    if(n>=1e9) return (n/1e9).toFixed(2)+"B";
+    if(n>=1e6) return (n/1e6).toFixed(2)+"M";
+    if(n>=1e3) return (n/1e3).toFixed(2)+"K";
+    return Math.floor(n);
+}
+
+/* ================= REBIRTH COST ================= */
+function rebirthCost(){
+    return 1000000 * Math.pow(2, rebirthLevel);
+}
+
+/* ================= REBIRTH MULT ================= */
+function rebirthMult(){
+    return 1 + Math.log10(rebirthLevel + 1) * 2;
+}
+
+/* ================= CRIT (LATE GAME ONLY) ================= */
+function getClickValue(){
+    let base = pc;
+
+    if(rebirthLevel < 3) return base;
+
+    let critChance = Math.min(0.15 + rebirthLevel*0.01, 0.6);
+    let crit = Math.random() < critChance;
+
+    return crit ? base * (3 + rebirthLevel*0.2) : base;
+}
+
+/* ================= UPGRADES ================= */
+let upgrades = [
+{name:"Finger Training", cost:10, base:10, type:"pc", value:1, scale:1.22},
+{name:"Grip Strength", cost:25, base:25, type:"pc", value:2, scale:1.22},
+{name:"Click Speed", cost:50, base:50, type:"pc", value:3, scale:1.22},
+
+{name:"Auto Miner", cost:100, base:100, type:"cps", value:2, scale:1.22},
+{name:"Factory", cost:250, base:250, type:"cps", value:5, scale:1.22},
+{name:"Workers", cost:600, base:600, type:"cps", value:10, scale:1.22},
+
+{name:"Mouse Upgrade", cost:1200, base:1200, type:"pc", value:10, scale:1.25},
+{name:"Cyber Fingers", cost:2500, base:2500, type:"pc", value:20, scale:1.25},
+{name:"Neural Click", cost:5000, base:5000, type:"pc", value:40, scale:1.25},
+
+{name:"Oil Rig", cost:10000, base:10000, type:"cps", value:50, scale:1.25},
+{name:"Mega Factory", cost:20000, base:20000, type:"cps", value:100, scale:1.25},
+{name:"Robot Army", cost:40000, base:40000, type:"cps", value:200, scale:1.25},
+
+{name:"Quantum Hand", cost:80000, base:80000, type:"pc", value:100, scale:1.28},
+{name:"Hyper Click", cost:160000, base:160000, type:"pc", value:200, scale:1.28},
+{name:"Click Titan", cost:320000, base:320000, type:"pc", value:500, scale:1.28},
+
+{name:"Space Mine", cost:600000, base:600000, type:"cps", value:1000, scale:1.28},
+{name:"AI Core", cost:1200000, base:1200000, type:"cps", value:2000, scale:1.28},
+{name:"Galaxy Drill", cost:2500000, base:2500000, type:"cps", value:5000, scale:1.28},
+
+{name:"REBIRTH", cost:1000000, base:1000000, type:"rebirth", value:1, scale:1}
+];
+
+/* ================= CLICK ================= */
+document.getElementById("clickBtn").onclick=()=>{
+    coins += getClickValue() * rebirthMult();
+    update();
+};
+
+/* ================= BUY ================= */
+function buy(i){
+    let u=upgrades[i];
+    if(!u || coins<u.cost) return;
+
+    coins -= u.cost;
+
+    if(u.type==="pc") pc += u.value;
+    if(u.type==="cps") cps += u.value;
+    if(u.type==="rebirth") rebirth();
+
+    u.cost = Math.floor(u.cost * u.scale);
+
+    render();
+    update();
+}
+
+/* ================= REBIRTH ================= */
+function rebirth(){
+    let cost = rebirthCost();
+    if(coins < cost) return;
+
+    rebirthLevel++;
+
+    coins=0;
+    pc=1;
+    cps=0;
+
+    upgrades.forEach(u=>{
+        u.cost = u.base;
+    });
+
+    update();
+}
+
+/* ================= REBIRTH UI ================= */
+function updateRebirthUI(){
+    let cost = rebirthCost();
+    let progress = Math.min(coins / cost, 1) * 100;
+
+    document.getElementById("rebirthBar").style.width = progress + "%";
+    document.getElementById("rebirthBtn").innerText = "REBIRTH ("+format(cost)+")";
+}
+
+/* ================= PAGE ================= */
+function change(dir){
+    page+=dir;
+    if(page<1) page=15;
+    if(page>15) page=1;
+    render();
+}
+
+/* ================= RENDER ================= */
+function render(){
+    let html="";
+
+    for(let i=0;i<15;i++){
+        html += `<div class="page ${i+1===page?'active':''}">`;
+
+        for(let j=0;j<3;j++){
+            let idx=i*3+j;
+            let u=upgrades[idx];
+            if(!u) continue;
+
+            let typeText =
+                u.type==="pc" ? "+PC" :
+                u.type==="cps" ? "+CPS" :
+                "REBIRTH";
+
+            html += `
+            <button class="upgrade" onclick="buy(${idx})">
+            ${u.name} (${typeText}: ${u.value}) - ${format(u.cost)}
+            </button>`;
+        }
+
+        html += `</div>`;
+    }
+
+    document.getElementById("pages").innerHTML=html;
+    document.getElementById("pageNum").innerText=page;
+}
+
+/* ================= UPDATE ================= */
+function update(){
+    document.getElementById("coins").innerText = format(coins);
+    document.getElementById("pc").innerText = pc;
+    document.getElementById("cps").innerText = cps;
+    document.getElementById("reb").innerText = rebirthLevel;
+
+    updateRebirthUI();
+}
+
+/* ================= LOOP ================= */
+setInterval(()=>{
+    coins += cps * rebirthMult();
+    update();
+},1000);
+
+render();
+
+</script>
+
+</body>
+</html>
