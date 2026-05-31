@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Clicker Empire - Rebirth Bar</title>
+<title>Clicker Empire Fixed UI</title>
 
 <style>
 body{
@@ -51,7 +51,7 @@ button{
 .page{display:none;}
 .active{display:block;}
 
-.topBar{
+.top{
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -59,15 +59,14 @@ button{
 }
 
 #rebirthBtn{
-    width:120px;
+    width:140px;
     background:#444;
     color:white;
     border-radius:8px;
 }
 
-.barWrap{
+.bar{
     background:#333;
-    width:100%;
     height:14px;
     border-radius:8px;
     overflow:hidden;
@@ -88,20 +87,16 @@ button{
 
 <h2>Clicker Empire</h2>
 
-<!-- TOP BAR -->
-<div class="topBar">
+<div class="top">
   <div>Coins: <span id="coins">0</span></div>
   <button id="rebirthBtn" onclick="rebirth()">REBIRTH</button>
 </div>
 
-<!-- PROGRESS BAR -->
-<div class="barWrap">
+<div class="bar">
   <div id="rebirthBar"></div>
 </div>
 
-<div class="stat">Click Power: <span id="pc">1</span></div>
-<div class="stat">CPS: <span id="cps">0</span></div>
-<div class="stat">Rebirth Level: <span id="reb">0</span></div>
+<div>PC: <span id="pc">1</span> | CPS: <span id="cps">0</span> | Rebirth: <span id="reb">0</span></div>
 
 <button id="clickBtn">CLICK</button>
 
@@ -133,30 +128,49 @@ function format(n){
     return Math.floor(n);
 }
 
-/* ================= REBIRTH COST ================= */
+/* ================= REBIRTH ================= */
 function rebirthCost(){
     return 1000000 * Math.pow(2, rebirthLevel);
 }
 
-/* ================= REBIRTH MULT ================= */
 function rebirthMult(){
     return 1 + Math.log10(rebirthLevel + 1) * 2;
 }
 
-/* ================= CRIT (LATE GAME ONLY) ================= */
-function getClickValue(){
-    let base = pc;
+function rebirth(){
+    if(coins < rebirthCost()) return;
 
-    if(rebirthLevel < 3) return base;
+    rebirthLevel++;
+    coins=0;
+    pc=1;
+    cps=0;
 
-    let critChance = Math.min(0.15 + rebirthLevel*0.01, 0.6);
-    let crit = Math.random() < critChance;
+    upgrades.forEach(u=>{
+        u.cost=u.base;
+    });
 
-    return crit ? base * (3 + rebirthLevel*0.2) : base;
+    update();
 }
 
+/* ================= CLICK ================= */
+function getClick(){
+    let base = pc;
+
+    if(rebirthLevel >= 3){
+        let crit = Math.random() < Math.min(0.15 + rebirthLevel*0.01,0.6);
+        if(crit) base *= (3 + rebirthLevel*0.2);
+    }
+
+    return base;
+}
+
+document.getElementById("clickBtn").onclick=()=>{
+    coins += getClick() * rebirthMult();
+    update();
+};
+
 /* ================= UPGRADES ================= */
-let upgrades = [
+let upgrades=[
 {name:"Finger Training", cost:10, base:10, type:"pc", value:1, scale:1.22},
 {name:"Grip Strength", cost:25, base:25, type:"pc", value:2, scale:1.22},
 {name:"Click Speed", cost:50, base:50, type:"pc", value:3, scale:1.22},
@@ -184,61 +198,30 @@ let upgrades = [
 {name:"REBIRTH", cost:1000000, base:1000000, type:"rebirth", value:1, scale:1}
 ];
 
-/* ================= CLICK ================= */
-document.getElementById("clickBtn").onclick=()=>{
-    coins += getClickValue() * rebirthMult();
-    update();
-};
-
 /* ================= BUY ================= */
 function buy(i){
     let u=upgrades[i];
     if(!u || coins<u.cost) return;
 
-    coins -= u.cost;
+    coins-=u.cost;
 
-    if(u.type==="pc") pc += u.value;
-    if(u.type==="cps") cps += u.value;
+    if(u.type==="pc") pc+=u.value;
+    if(u.type==="cps") cps+=u.value;
     if(u.type==="rebirth") rebirth();
 
-    u.cost = Math.floor(u.cost * u.scale);
+    u.cost=Math.floor(u.cost*u.scale);
 
     render();
     update();
 }
 
-/* ================= REBIRTH ================= */
-function rebirth(){
-    let cost = rebirthCost();
-    if(coins < cost) return;
+/* ================= PAGE CHANGE ================= */
+function change(d){
+    page += d;
 
-    rebirthLevel++;
+    if(page < 1) page = 15;
+    if(page > 15) page = 1;
 
-    coins=0;
-    pc=1;
-    cps=0;
-
-    upgrades.forEach(u=>{
-        u.cost = u.base;
-    });
-
-    update();
-}
-
-/* ================= REBIRTH UI ================= */
-function updateRebirthUI(){
-    let cost = rebirthCost();
-    let progress = Math.min(coins / cost, 1) * 100;
-
-    document.getElementById("rebirthBar").style.width = progress + "%";
-    document.getElementById("rebirthBtn").innerText = "REBIRTH ("+format(cost)+")";
-}
-
-/* ================= PAGE ================= */
-function change(dir){
-    page+=dir;
-    if(page<1) page=15;
-    if(page>15) page=1;
     render();
 }
 
@@ -254,41 +237,45 @@ function render(){
             let u=upgrades[idx];
             if(!u) continue;
 
-            let typeText =
-                u.type==="pc" ? "+PC" :
-                u.type==="cps" ? "+CPS" :
-                "REBIRTH";
+            let t=u.type==="pc"?"+PC":u.type==="cps"?"+CPS":"REBIRTH";
 
-            html += `
+            html+=`
             <button class="upgrade" onclick="buy(${idx})">
-            ${u.name} (${typeText}: ${u.value}) - ${format(u.cost)}
+            ${u.name} (${t}:${u.value}) - ${format(u.cost)}
             </button>`;
         }
 
-        html += `</div>`;
+        html+="</div>";
     }
 
     document.getElementById("pages").innerHTML=html;
-    document.getElementById("pageNum").innerText=page;
+
+    // 🔥 FIXED PAGE DISPLAY
+    document.getElementById("pageNum").innerText = page;
 }
 
 /* ================= UPDATE ================= */
 function update(){
-    document.getElementById("coins").innerText = format(coins);
-    document.getElementById("pc").innerText = pc;
-    document.getElementById("cps").innerText = cps;
-    document.getElementById("reb").innerText = rebirthLevel;
+    document.getElementById("coins").innerText=format(coins);
+    document.getElementById("pc").innerText=pc;
+    document.getElementById("cps").innerText=cps;
+    document.getElementById("reb").innerText=rebirthLevel;
 
-    updateRebirthUI();
+    let cost=rebirthCost();
+    let bar=Math.min(coins/cost,1)*100;
+
+    document.getElementById("rebirthBar").style.width=bar+"%";
+    document.getElementById("rebirthBtn").innerText="REBIRTH ("+format(cost)+")";
 }
 
 /* ================= LOOP ================= */
 setInterval(()=>{
-    coins += cps * rebirthMult();
+    coins+=cps*rebirthMult();
     update();
 },1000);
 
 render();
+update();
 
 </script>
 
