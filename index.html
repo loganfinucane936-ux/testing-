@@ -62,7 +62,13 @@ button{
     width:140px;
     background:#444;
     color:white;
-    border-radius:8px;
+}
+
+#saveBtn{
+    width:140px;
+    background:#2980b9;
+    color:white;
+    margin-top:5px;
 }
 
 .bar{
@@ -92,6 +98,8 @@ button{
   <button id="rebirthBtn" onclick="rebirth()">REBIRTH</button>
 </div>
 
+<button id="saveBtn" onclick="saveGame()">SAVE GAME</button>
+
 <div class="bar">
   <div id="rebirthBar"></div>
 </div>
@@ -113,11 +121,7 @@ button{
 <script>
 
 /* ================= CORE ================= */
-let coins=0;
-let pc=1;
-let cps=0;
-let page=1;
-let rebirthLevel=0;
+let coins=0, pc=1, cps=0, page=1, rebirthLevel=0;
 
 /* ================= FORMAT ================= */
 function format(n){
@@ -145,9 +149,7 @@ function rebirth(){
     pc=1;
     cps=0;
 
-    upgrades.forEach(u=>{
-        u.cost=u.base;
-    });
+    upgrades.forEach(u=>u.cost=u.base);
 
     update();
 }
@@ -155,12 +157,10 @@ function rebirth(){
 /* ================= CLICK ================= */
 function getClick(){
     let base = pc;
-
     if(rebirthLevel >= 3){
         let crit = Math.random() < Math.min(0.15 + rebirthLevel*0.01,0.6);
         if(crit) base *= (3 + rebirthLevel*0.2);
     }
-
     return base;
 }
 
@@ -169,34 +169,57 @@ document.getElementById("clickBtn").onclick=()=>{
     update();
 };
 
-/* ================= UPGRADES ================= */
-let upgrades=[
-{name:"Finger Training", cost:10, base:10, type:"pc", value:1, scale:1.22},
-{name:"Grip Strength", cost:25, base:25, type:"pc", value:2, scale:1.22},
-{name:"Click Speed", cost:50, base:50, type:"pc", value:3, scale:1.22},
+/* ================= 45 UPGRADES ================= */
+let upgrades = [];
 
-{name:"Auto Miner", cost:100, base:100, type:"cps", value:2, scale:1.22},
-{name:"Factory", cost:250, base:250, type:"cps", value:5, scale:1.22},
-{name:"Workers", cost:600, base:600, type:"cps", value:10, scale:1.22},
+function add(name, base, type, value, scale){
+    upgrades.push({name, cost:base, base, type, value, scale});
+}
 
-{name:"Mouse Upgrade", cost:1200, base:1200, type:"pc", value:10, scale:1.25},
-{name:"Cyber Fingers", cost:2500, base:2500, type:"pc", value:20, scale:1.25},
-{name:"Neural Click", cost:5000, base:5000, type:"pc", value:40, scale:1.25},
+/* Tier 1 */
+add("Finger Training",10,"pc",1,1.22);
+add("Grip Strength",25,"pc",2,1.22);
+add("Click Speed",50,"pc",3,1.22);
+add("Soft Mouse",80,"pc",5,1.22);
+add("Better Desk",120,"pc",8,1.22);
 
-{name:"Oil Rig", cost:10000, base:10000, type:"cps", value:50, scale:1.25},
-{name:"Mega Factory", cost:20000, base:20000, type:"cps", value:100, scale:1.25},
-{name:"Robot Army", cost:40000, base:40000, type:"cps", value:200, scale:1.25},
+/* Tier 2 */
+add("Auto Miner",200,"cps",2,1.23);
+add("Factory",400,"cps",5,1.23);
+add("Workers",800,"cps",10,1.23);
+add("Robotic Arm",1500,"cps",20,1.23);
+add("Automation Line",2500,"cps",35,1.23);
 
-{name:"Quantum Hand", cost:80000, base:80000, type:"pc", value:100, scale:1.28},
-{name:"Hyper Click", cost:160000, base:160000, type:"pc", value:200, scale:1.28},
-{name:"Click Titan", cost:320000, base:320000, type:"pc", value:500, scale:1.28},
+/* Tier 3 */
+add("Mouse Upgrade",4000,"pc",15,1.25);
+add("Cyber Fingers",7000,"pc",25,1.25);
+add("Neural Click",12000,"pc",50,1.25);
+add("Quantum Tap",20000,"pc",100,1.25);
+add("Time Click",35000,"pc",200,1.25);
 
-{name:"Space Mine", cost:600000, base:600000, type:"cps", value:1000, scale:1.28},
-{name:"AI Core", cost:1200000, base:1200000, type:"cps", value:2000, scale:1.28},
-{name:"Galaxy Drill", cost:2500000, base:2500000, type:"cps", value:5000, scale:1.28},
+/* Tier 4 */
+add("Oil Rig",60000,"cps",100,1.27);
+add("Mega Factory",100000,"cps",200,1.27);
+add("Robot Army",200000,"cps",500,1.27);
+add("Space Factory",400000,"cps",1200,1.27);
+add("Moon Mine",800000,"cps",2500,1.27);
 
-{name:"REBIRTH", cost:1000000, base:1000000, type:"rebirth", value:1, scale:1}
-];
+/* Tier 5 */
+add("Quantum Hand",1500000,"pc",500,1.3);
+add("Hyper Click",3000000,"pc",1200,1.3);
+add("Click Titan",6000000,"pc",3000,1.3);
+add("God Finger",12000000,"pc",7000,1.3);
+add("Infinity Tap",25000000,"pc",15000,1.3);
+
+/* Tier 6 */
+add("Space Mine",40000000,"cps",5000,1.32);
+add("AI Core",80000000,"cps",12000,1.32);
+add("Galaxy Drill",150000000,"cps",25000,1.32);
+add("Star Factory",300000000,"cps",60000,1.32);
+add("Black Hole Extractor",600000000,"cps",150000,1.32);
+
+/* Endgame */
+add("REBIRTH",1000000,"rebirth",1,1);
 
 /* ================= BUY ================= */
 function buy(i){
@@ -215,13 +238,11 @@ function buy(i){
     update();
 }
 
-/* ================= PAGE CHANGE ================= */
+/* ================= PAGE ================= */
 function change(d){
     page += d;
-
-    if(page < 1) page = 15;
-    if(page > 15) page = 1;
-
+    if(page<1) page=15;
+    if(page>15) page=1;
     render();
 }
 
@@ -249,9 +270,7 @@ function render(){
     }
 
     document.getElementById("pages").innerHTML=html;
-
-    // 🔥 FIXED PAGE DISPLAY
-    document.getElementById("pageNum").innerText = page;
+    document.getElementById("pageNum").innerText=page;
 }
 
 /* ================= UPDATE ================= */
@@ -262,10 +281,32 @@ function update(){
     document.getElementById("reb").innerText=rebirthLevel;
 
     let cost=rebirthCost();
-    let bar=Math.min(coins/cost,1)*100;
-
-    document.getElementById("rebirthBar").style.width=bar+"%";
+    document.getElementById("rebirthBar").style.width=Math.min(coins/cost,1)*100+"%";
     document.getElementById("rebirthBtn").innerText="REBIRTH ("+format(cost)+")";
+}
+
+/* ================= SAVE / LOAD ================= */
+function saveGame(){
+    localStorage.setItem("clickerSave",JSON.stringify({
+        coins,pc,cps,page,rebirthLevel,
+        upgrades
+    }));
+    alert("Game Saved!");
+}
+
+function loadGame(){
+    let data = localStorage.getItem("clickerSave");
+    if(!data) return;
+
+    data = JSON.parse(data);
+
+    coins=data.coins;
+    pc=data.pc;
+    cps=data.cps;
+    page=data.page;
+    rebirthLevel=data.rebirthLevel;
+
+    if(data.upgrades) upgrades=data.upgrades;
 }
 
 /* ================= LOOP ================= */
@@ -274,6 +315,8 @@ setInterval(()=>{
     update();
 },1000);
 
+/* ================= INIT ================= */
+loadGame();
 render();
 update();
 
